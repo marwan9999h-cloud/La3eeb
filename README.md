@@ -1,11 +1,67 @@
-<div align="center">
+# لعبة مين اللاعب؟ ⚽🎮
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+لعبة تحدي كروية جماعية مصرية ممتعة، بتجمع بين الأصدقاء لتخمين لاعبي كرة القدم المشهورين من خلال أسئلة ذكية ونظام نقاط عادل.
 
-  <h1>Built with AI Studio</h2>
+---
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+## 🚀 التشغيل المحلي والتطوير
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+1. **تثبيت الاعتماديات:**
+   ```bash
+   npm install
+   ```
 
-</div>
+2. **تشغيل سيرفر التطوير (Dev Server):**
+   ```bash
+   npm run dev
+   ```
+   التطبيق هيشتغل على المنفذ `3000`: `http://localhost:3000`.
+
+---
+
+## 📦 البناء والإنتاج (Production)
+
+1. **بناء المشروع:**
+   ```bash
+   npm run build
+   ```
+
+2. **تشغيل سيرفر الإنتاج:**
+   ```bash
+   npm start
+   ```
+
+---
+
+## ⚙️ المتغيرات البيئية (Environment Variables)
+
+انسخ ملف `.env.example` لـ `.env` وظبط القيم:
+- `GEMINI_API_KEY`: مفتاح واجهة برمجة Gemini عشان يجيب معلومات اللاعبين الجدد ومساعد الجولة.
+- `GEMINI_MODELS`: موديلات Gemini بالترتيب الافتراضي (`gemini-3.1-flash-lite,gemini-3.8-flash`).
+- `PORT`: المنفذ (افتراضي `3000`).
+
+---
+
+## ⚠️ متطلبات الاستضافة والنشر (Full-Stack App)
+
+- **التطبيق ده Full-stack (React + Express Server)**:
+- **ممنوع** نشره كـ Static Site على GitHub Pages أو Cloudflare Pages العادية.
+- محتاج بيئة استضافة تدعم Node.js وسيرفر شغال (زي Google Cloud Run أو Render أو Railway أو VPS).
+
+---
+
+## 🩺 فحص صحة السيرفر (Health Check)
+
+تقدر تفحص حالة السيرفر، جاهزية الموديلات، وعدد اللاعبين في القاعدة والفهرس عن طريق:
+```
+GET /api/health
+```
+
+---
+
+## 🧪 تشغيل الاختبارات الآلية (Automated Tests)
+
+المشروع مزود باختبارات وحدة آلية مبنية بـ Vitest لتأكيد سلامة الحسابات وقواعد اللعبة:
+```bash
+npm test
+```
