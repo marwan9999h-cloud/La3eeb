@@ -256,6 +256,19 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
     const isAiKnowledge = generatedProfile.researchMode === 'ai_knowledge';
     const isLocalDb = generatedProfile.researchMode === 'local_db';
     const isUnavailable = generatedProfile.researchMode === 'unavailable';
+    const isUnverified =
+      !isLocalDb &&
+      (generatedProfile.verification === 'unverified' ||
+        (isAiKnowledge && (!generatedProfile.sources || generatedProfile.sources.length === 0)));
+
+    const hasBasicInfo = Boolean(
+      (generatedProfile.nationality && generatedProfile.nationality !== 'غير متاح') ||
+      (generatedProfile.position && generatedProfile.position !== 'غير متاح') ||
+      generatedProfile.currentClub ||
+      generatedProfile.lastClub ||
+      (generatedProfile.age && generatedProfile.age !== 'غير متاح') ||
+      (generatedProfile.nationalTeam && generatedProfile.nationalTeam !== 'غير متاح')
+    );
 
     const hasStats = Boolean(
       (generatedProfile.appearances && generatedProfile.appearances !== 'غير متاح') ||
@@ -295,7 +308,7 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
         </div>
 
         {/* Warning Banners */}
-        {isAiKnowledge && (
+        {isAiKnowledge && isUnverified && (
           <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold flex items-center gap-2.5">
             <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
             <span>معلومات الـAI مش متحققة من مصادر مباشرة، فراجعها قبل ما تقولها.</span>
@@ -314,7 +327,7 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
           {/* Header Info */}
           <div className="flex items-center justify-between bg-[#171E1A] p-4 rounded-2xl border border-[#212823]">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-xl font-black text-[#EEF2EF]">
                   {generatedProfile.displayName}
                 </h3>
@@ -323,6 +336,25 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
                     #{generatedProfile.shirtNumber}
                   </span>
                 )}
+                {isUnverified && (
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                    غير مؤكد
+                  </span>
+                )}
+                {!isLocalDb &&
+                  !isUnverified &&
+                  generatedProfile.sources &&
+                  generatedProfile.sources.length > 0 &&
+                  /^https?:\/\//i.test(generatedProfile.sources[0].uri) && (
+                    <a
+                      href={generatedProfile.sources[0].uri}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500/25 transition-colors inline-flex items-center gap-1"
+                    >
+                      مصدر: ويكيبيديا ↗
+                    </a>
+                  )}
               </div>
               <span className="text-xs text-[#8FA095] block mt-0.5">
                 {generatedProfile.playerName}
@@ -334,41 +366,49 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
           </div>
 
           {/* Section 1: Basic Information */}
-          <div className="space-y-1.5">
-            <h4 className="text-xs font-black text-[#22C55E] uppercase tracking-wider flex items-center gap-1.5">
-              <span>📌</span> 1. المعلومات الأساسية
-            </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-[#171E1A]/80 p-3.5 rounded-2xl border border-[#212823]">
-              <div>
-                <span className="text-[#5C6B61] block mb-0.5">الجنسية</span>
-                <span className="font-bold text-[#EEF2EF]">{generatedProfile.nationality}</span>
+          {hasBasicInfo && (
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-black text-[#22C55E] uppercase tracking-wider flex items-center gap-1.5">
+                <span>📌</span> 1. المعلومات الأساسية
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-[#171E1A]/80 p-3.5 rounded-2xl border border-[#212823]">
+                {generatedProfile.nationality && generatedProfile.nationality !== 'غير متاح' && (
+                  <div>
+                    <span className="text-[#5C6B61] block mb-0.5">الجنسية</span>
+                    <span className="font-bold text-[#EEF2EF]">{generatedProfile.nationality}</span>
+                  </div>
+                )}
+                {generatedProfile.position && generatedProfile.position !== 'غير متاح' && (
+                  <div>
+                    <span className="text-[#5C6B61] block mb-0.5">المركز</span>
+                    <span className="font-bold text-[#EEF2EF]">{generatedProfile.position}</span>
+                  </div>
+                )}
+                {(generatedProfile.currentClub || generatedProfile.lastClub) && (
+                  <div>
+                    <span className="text-[#5C6B61] block mb-0.5">
+                      {generatedProfile.isRetired ? 'آخر نادي' : 'النادي الحالي'}
+                    </span>
+                    <span className="font-bold text-[#22C55E]">
+                      {generatedProfile.currentClub || generatedProfile.lastClub}
+                    </span>
+                  </div>
+                )}
+                {generatedProfile.age && generatedProfile.age !== 'غير متاح' && (
+                  <div>
+                    <span className="text-[#5C6B61] block mb-0.5">العمر / الميلاد</span>
+                    <span className="font-bold text-[#EEF2EF]">{generatedProfile.age}</span>
+                  </div>
+                )}
+                {generatedProfile.nationalTeam && generatedProfile.nationalTeam !== 'غير متاح' && (
+                  <div className="col-span-2 sm:col-span-2">
+                    <span className="text-[#5C6B61] block mb-0.5">المنتخب الوطني</span>
+                    <span className="font-bold text-[#EEF2EF]">{generatedProfile.nationalTeam}</span>
+                  </div>
+                )}
               </div>
-              <div>
-                <span className="text-[#5C6B61] block mb-0.5">المركز</span>
-                <span className="font-bold text-[#EEF2EF]">{generatedProfile.position}</span>
-              </div>
-              <div>
-                <span className="text-[#5C6B61] block mb-0.5">
-                  {generatedProfile.isRetired ? 'آخر نادي' : 'النادي الحالي'}
-                </span>
-                <span className="font-bold text-[#22C55E]">
-                  {generatedProfile.currentClub || generatedProfile.lastClub || 'غير محدد'}
-                </span>
-              </div>
-              {generatedProfile.age && generatedProfile.age !== 'غير متاح' && (
-                <div>
-                  <span className="text-[#5C6B61] block mb-0.5">العمر / الميلاد</span>
-                  <span className="font-bold text-[#EEF2EF]">{generatedProfile.age}</span>
-                </div>
-              )}
-              {generatedProfile.nationalTeam && generatedProfile.nationalTeam !== 'غير متاح' && (
-                <div className="col-span-2 sm:col-span-2">
-                  <span className="text-[#5C6B61] block mb-0.5">المنتخب الوطني</span>
-                  <span className="font-bold text-[#EEF2EF]">{generatedProfile.nationalTeam}</span>
-                </div>
-              )}
             </div>
-          </div>
+          )}
 
           {/* Section 2: Career & Clubs */}
           {generatedProfile.clubs && generatedProfile.clubs.length > 0 && (
@@ -524,9 +564,11 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
               {candidate.name}
             </span>
             <div className="flex items-center gap-2 mt-1.5">
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#22C55E]/10 text-[#22C55E]">
-                {candidate.isRetired ? 'معتزل' : 'لاعب حالي'}
-              </span>
+              {typeof candidate.isRetired === 'boolean' && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-[#22C55E]/10 text-[#22C55E]">
+                  {candidate.isRetired ? 'معتزل' : 'لاعب حالي'}
+                </span>
+              )}
               {candidate.eraOrNote && (
                 <span className="text-[11px] text-[#8FA095]">
                   {candidate.eraOrNote}
@@ -537,22 +579,34 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
         </div>
 
         {/* Details Grid */}
-        <div className="grid grid-cols-2 gap-2.5 text-xs bg-[#171E1A] p-4 rounded-2xl border border-[#212823]">
-          <div>
-            <span className="text-[#5C6B61] block mb-0.5">الجنسية</span>
-            <span className="font-bold text-[#EEF2EF]">{candidate.nationality}</span>
+        {Boolean(
+          (candidate.nationality && candidate.nationality !== 'غير متاح') ||
+          (candidate.position && candidate.position !== 'غير متاح') ||
+          (candidate.currentClubOrLast && candidate.currentClubOrLast !== 'غير متاح')
+        ) && (
+          <div className="grid grid-cols-2 gap-2.5 text-xs bg-[#171E1A] p-4 rounded-2xl border border-[#212823]">
+            {candidate.nationality && candidate.nationality !== 'غير متاح' && (
+              <div>
+                <span className="text-[#5C6B61] block mb-0.5">الجنسية</span>
+                <span className="font-bold text-[#EEF2EF]">{candidate.nationality}</span>
+              </div>
+            )}
+            {candidate.position && candidate.position !== 'غير متاح' && (
+              <div>
+                <span className="text-[#5C6B61] block mb-0.5">المركز</span>
+                <span className="font-bold text-[#EEF2EF]">{candidate.position}</span>
+              </div>
+            )}
+            {candidate.currentClubOrLast && candidate.currentClubOrLast !== 'غير متاح' && (
+              <div className="col-span-2 pt-2 border-t border-[#212823]">
+                <span className="text-[#5C6B61] block mb-0.5">
+                  {candidate.isRetired ? 'آخر نادي لعب له' : 'النادي الحالي أو الأخير'}
+                </span>
+                <span className="font-bold text-[#22C55E]">{candidate.currentClubOrLast}</span>
+              </div>
+            )}
           </div>
-          <div>
-            <span className="text-[#5C6B61] block mb-0.5">المركز</span>
-            <span className="font-bold text-[#EEF2EF]">{candidate.position}</span>
-          </div>
-          <div className="col-span-2 pt-2 border-t border-[#212823]">
-            <span className="text-[#5C6B61] block mb-0.5">
-              {candidate.isRetired ? 'آخر نادي لعب له' : 'النادي الحالي'}
-            </span>
-            <span className="font-bold text-[#22C55E]">{candidate.currentClubOrLast}</span>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Action Buttons */}

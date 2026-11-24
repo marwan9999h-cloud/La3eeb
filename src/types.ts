@@ -42,7 +42,7 @@ export interface PlayerCandidate {
   nationality: string;
   position: string;
   currentClubOrLast: string;
-  isRetired: boolean;
+  isRetired?: boolean;
   eraOrNote?: string;
 }
 
@@ -82,6 +82,7 @@ export interface PlayerProfile {
   verifiedFacts: string[];
   photoUrl?: string;
   researchMode?: 'local_db' | 'ai_knowledge' | 'unavailable';
+  verification?: 'verified' | 'unverified';
   sources?: Array<{ uri: string; title: string }>;
   isCustomOrSecret?: boolean;
 }

@@ -36,7 +36,9 @@
 ## ⚙️ المتغيرات البيئية (Environment Variables)
 
 انسخ ملف `.env.example` لـ `.env` وظبط القيم:
-- `GEMINI_API_KEY`: مفتاح واجهة برمجة Gemini عشان يجيب معلومات اللاعبين الجدد ومساعد الجولة.
+- `GROQ_API_KEY`: مفتاح Groq API المجاني (المزوّد الأساسي للبحث وملفات اللاعبين ومساعد الجولة).
+- `GROQ_MODEL`: موديل Groq الافتراضي (`openai/gpt-oss-120b` والاحتياطي `openai/gpt-oss-20b`).
+- `GEMINI_API_KEY`: مفتاح واجهة برمجة Gemini (المزوّد الاحتياطي).
 - `GEMINI_MODELS`: موديلات Gemini بالترتيب الافتراضي (`gemini-3.1-flash-lite,gemini-3.8-flash`).
 - `PORT`: المنفذ (افتراضي `3000`).
 

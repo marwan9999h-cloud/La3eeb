@@ -38,6 +38,7 @@ export interface StoredPlayer {
 
 import { EXTRA_FAMOUS_PLAYERS } from './playersDataExtended.js';
 import { PLAYERS_INDEX } from './playersIndex.js';
+import { buildCanonicalNameKey } from './nameCanonicalizer.js';
 
 const CORE_FAMOUS_PLAYERS: StoredPlayer[] = [
   {
@@ -1394,11 +1395,12 @@ export function searchFuzzy<T extends { id: string; name: string; displayName: s
   return matches.slice(0, 4).map((m) => m.item);
 }
 
-// Find matching players in the built-in database with intelligent Arabic ranking
+// Find matching players in the built-in database with intelligent cross-script canonical ranking
 export function searchBuiltinPlayers(query: string): StoredPlayer[] {
   const normQuery = normalizeSearch(query);
   if (normQuery.length < 2) return [];
   const queryNoAl = stripAl(normQuery);
+  const queryCanon = buildCanonicalNameKey(query);
 
   const results: { player: StoredPlayer; score: number }[] = [];
 
@@ -1408,17 +1410,45 @@ export function searchBuiltinPlayers(query: string): StoredPlayer[] {
     const normDisplayNameNoAl = stripAl(normDisplayName);
     const normName = normalizeSearch(player.name);
     const normId = normalizeSearch(player.id);
+    const dnCanon = buildCanonicalNameKey(player.displayName);
+    const enCanon = buildCanonicalNameKey(player.name);
 
-    // Exact match on display name or official name
+    // Exact match on display name, official name, or canonical cross-script identity
     if (normDisplayName === normQuery || normName === normQuery || normId === normQuery) {
       score += 100;
     } else if (normDisplayNameNoAl === queryNoAl) {
       score += 98;
+    } else if (
+      queryCanon.canonicalKey &&
+      (dnCanon.canonicalKey === queryCanon.canonicalKey ||
+        enCanon.canonicalKey === queryCanon.canonicalKey)
+    ) {
+      score += 96;
     } else if (normQuery.length >= 3) {
-      if (normDisplayName.includes(normQuery) || normName.includes(normQuery)) {
-        score += 70;
-      } else if (normDisplayNameNoAl.includes(queryNoAl)) {
-        score += 65;
+      if (queryCanon.tokenKeys.length <= 1) {
+        if (normDisplayName.includes(normQuery) || normName.includes(normQuery)) {
+          score += 70;
+        } else if (normDisplayNameNoAl.includes(queryNoAl)) {
+          score += 65;
+        } else if (
+          queryCanon.tokenKeys.length === 1 &&
+          (dnCanon.tokenKeys.includes(queryCanon.tokenKeys[0]) ||
+            enCanon.tokenKeys.includes(queryCanon.tokenKeys[0]))
+        ) {
+          score += 65;
+        }
+      } else {
+        if (normDisplayName.includes(normQuery) || normName.includes(normQuery)) {
+          score += 70;
+        } else if (normDisplayNameNoAl.includes(queryNoAl)) {
+          score += 65;
+        } else if (
+          queryCanon.tokenKeys.every(
+            (tk) => dnCanon.tokenKeys.includes(tk) || enCanon.tokenKeys.includes(tk)
+          )
+        ) {
+          score += 65;
+        }
       }
     }
 
@@ -1426,12 +1456,25 @@ export function searchBuiltinPlayers(query: string): StoredPlayer[] {
     for (const alias of player.aliases) {
       const normAlias = normalizeSearch(alias);
       const normAliasNoAl = stripAl(normAlias);
+      const aliasCanon = buildCanonicalNameKey(alias);
 
-      if (normAlias === normQuery || normAliasNoAl === queryNoAl) {
+      if (
+        normAlias === normQuery ||
+        normAliasNoAl === queryNoAl ||
+        (queryCanon.canonicalKey && aliasCanon.canonicalKey === queryCanon.canonicalKey)
+      ) {
         score += 95;
         break;
       } else if (normQuery.length >= 3 && normAlias.length >= 3) {
-        if (normAlias.includes(normQuery) || normQuery.includes(normAlias)) {
+        if (queryCanon.tokenKeys.length <= 1) {
+          if (normAlias.includes(normQuery) || normQuery.includes(normAlias)) {
+            score += 55;
+            break;
+          }
+        } else if (
+          normAlias.includes(normQuery) ||
+          queryCanon.tokenKeys.every((tk) => aliasCanon.tokenKeys.includes(tk))
+        ) {
           score += 55;
           break;
         }
@@ -1448,7 +1491,6 @@ export function searchBuiltinPlayers(query: string): StoredPlayer[] {
       }
     }
 
-    // Only include real player matches (threshold 50 prevents matching all players just by nationality)
     if (score >= 50) {
       results.push({ player, score });
     }
@@ -1458,24 +1500,40 @@ export function searchBuiltinPlayers(query: string): StoredPlayer[] {
   return results.map((r) => r.player);
 }
 
-// Get player by ID or exact match
+// Get player by ID or exact / canonical match
 export function getBuiltinPlayerByIdOrName(nameOrId: string): StoredPlayer | undefined {
   if (!nameOrId) return undefined;
   const norm = normalizeSearch(nameOrId);
   const normNoAl = stripAl(norm);
+  const queryCanon = buildCanonicalNameKey(nameOrId);
 
-  return FAMOUS_PLAYERS_DB.find(
-    (p) =>
+  return FAMOUS_PLAYERS_DB.find((p) => {
+    if (
       p.id === nameOrId ||
       normalizeSearch(p.id) === norm ||
       normalizeSearch(p.displayName) === norm ||
       stripAl(normalizeSearch(p.displayName)) === normNoAl ||
-      normalizeSearch(p.name) === norm ||
-      p.aliases.some((a) => {
-        const normA = normalizeSearch(a);
-        return normA === norm || stripAl(normA) === normNoAl;
-      })
-  );
+      normalizeSearch(p.name) === norm
+    ) {
+      return true;
+    }
+    if (queryCanon.canonicalKey) {
+      if (
+        buildCanonicalNameKey(p.displayName).canonicalKey === queryCanon.canonicalKey ||
+        buildCanonicalNameKey(p.name).canonicalKey === queryCanon.canonicalKey
+      ) {
+        return true;
+      }
+    }
+    return p.aliases.some((a) => {
+      const normA = normalizeSearch(a);
+      return (
+        normA === norm ||
+        stripAl(normA) === normNoAl ||
+        (queryCanon.canonicalKey && buildCanonicalNameKey(a).canonicalKey === queryCanon.canonicalKey)
+      );
+    });
+  });
 }
 
 // Generate smart offline assistant response using profile facts

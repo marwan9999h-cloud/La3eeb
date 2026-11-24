@@ -41,6 +41,24 @@ export function normalizeProfile(
       ? p.researchMode
       : 'ai_knowledge';
 
+  const verification: 'verified' | 'unverified' | undefined =
+    p.verification === 'verified' || p.verification === 'unverified' ? p.verification : undefined;
+
+  const researchProvider: 'groq' | 'gemini' | undefined =
+    p.researchProvider === 'groq' || p.researchProvider === 'gemini'
+      ? p.researchProvider
+      : undefined;
+
+  const safeSources = Array.isArray(p.sources)
+    ? p.sources.filter(
+        (s: any) =>
+          s &&
+          typeof s.uri === 'string' &&
+          (s.uri.startsWith('https://') || s.uri.startsWith('http://')) &&
+          typeof s.title === 'string'
+      )
+    : [];
+
   return {
     playerName: cleanString(p.playerName, fallbackNames?.playerName || 'غير متاح'),
     displayName: cleanString(p.displayName, fallbackNames?.displayName || 'غير متاح'),
@@ -98,7 +116,14 @@ export function normalizeProfile(
     importantMatches: cleanArray(p.importantMatches, 30),
     verifiedFacts: cleanArray(p.verifiedFacts, 30),
     researchMode,
-    sources: researchMode === 'local_db' && Array.isArray(p.sources) ? p.sources : [],
+    ...(researchProvider ? { researchProvider } : {}),
+    ...(verification ? { verification } : {}),
+    sources:
+      verification === 'unverified'
+        ? []
+        : researchMode === 'local_db' || verification === 'verified'
+        ? safeSources
+        : [],
   };
 }
 

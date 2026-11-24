@@ -93,76 +93,118 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
             )}
 
             {/* Header Banner */}
-            <div className="bg-[#171E1A] p-4 rounded-2xl border border-[#212823]">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-black text-[#EEF2EF]">
-                      {profile.displayName}
-                    </h3>
-                    {profile.shirtNumber && profile.shirtNumber !== 'غير متاح' && (
-                      <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-[#22C55E]/20 text-[#22C55E]">
-                        #{profile.shirtNumber}
+            {(() => {
+              const isUnverified =
+                profile.researchMode !== 'local_db' &&
+                (profile.verification === 'unverified' ||
+                  (profile.researchMode === 'ai_knowledge' &&
+                    (!profile.sources || profile.sources.length === 0)));
+
+              const hasBasicInfo = Boolean(
+                (profile.nationality && profile.nationality !== 'غير متاح') ||
+                (profile.position && profile.position !== 'غير متاح') ||
+                profile.currentClub ||
+                profile.lastClub ||
+                (profile.age && profile.age !== 'غير متاح') ||
+                (profile.nationalTeam && profile.nationalTeam !== 'غير متاح')
+              );
+
+              return (
+                <>
+                  <div className="bg-[#171E1A] p-4 rounded-2xl border border-[#212823]">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-xl font-black text-[#EEF2EF]">
+                            {profile.displayName}
+                          </h3>
+                          {profile.shirtNumber && profile.shirtNumber !== 'غير متاح' && (
+                            <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-[#22C55E]/20 text-[#22C55E]">
+                              #{profile.shirtNumber}
+                            </span>
+                          )}
+                          {isUnverified && (
+                            <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                              غير مؤكد
+                            </span>
+                          )}
+                          {profile.researchMode !== 'local_db' &&
+                            !isUnverified &&
+                            profile.sources &&
+                            profile.sources.length > 0 &&
+                            /^https?:\/\//i.test(profile.sources[0].uri) && (
+                              <a
+                                href={profile.sources[0].uri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-500/30 hover:bg-sky-500/25 transition-colors inline-flex items-center gap-1"
+                              >
+                                مصدر: ويكيبيديا ↗
+                              </a>
+                            )}
+                        </div>
+                        <span className="text-xs text-[#8FA095] block mt-0.5">
+                          {profile.playerName}
+                        </span>
+                      </div>
+                      <span className="text-xs font-bold px-3 py-1 rounded-xl bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30">
+                        {profile.isRetired ? 'معتزل' : 'لاعب حالي'}
                       </span>
+                    </div>
+                    {!profile.isRetired && profile.researchMode !== 'unavailable' && (
+                      <p className="text-[11px] text-[#5C6B61] mt-2 pt-2 border-t border-[#212823]/60">
+                        النادي والأرقام ممكن تكون اتغيرت — راجعها قبل ما تحسم.
+                      </p>
                     )}
                   </div>
-                  <span className="text-xs text-[#8FA095] block mt-0.5">
-                    {profile.playerName}
-                  </span>
-                </div>
-                <span className="text-xs font-bold px-3 py-1 rounded-xl bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30">
-                  {profile.isRetired ? 'معتزل' : 'لاعب حالي'}
-                </span>
-              </div>
-              {!profile.isRetired && profile.researchMode !== 'unavailable' && (
-                <p className="text-[11px] text-[#5C6B61] mt-2 pt-2 border-t border-[#212823]/60">
-                  النادي والأرقام ممكن تكون اتغيرت — راجعها قبل ما تحسم.
-                </p>
-              )}
-            </div>
 
-            {/* 1. Basic Info */}
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-black text-[#22C55E] uppercase tracking-wider flex items-center gap-1.5">
-                <span>📌</span> 1. المعلومات الأساسية
-              </h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-[#171E1A]/80 p-3.5 rounded-2xl border border-[#212823]">
-                {profile.nationality && profile.nationality !== 'غير متاح' && (
-                  <div>
-                    <span className="text-[#5C6B61] block mb-0.5">الجنسية</span>
-                    <span className="font-bold text-[#EEF2EF]">{profile.nationality}</span>
-                  </div>
-                )}
-                {profile.position && profile.position !== 'غير متاح' && (
-                  <div>
-                    <span className="text-[#5C6B61] block mb-0.5">المركز</span>
-                    <span className="font-bold text-[#EEF2EF]">{profile.position}</span>
-                  </div>
-                )}
-                {(profile.currentClub || profile.lastClub) && (
-                  <div>
-                    <span className="text-[#5C6B61] block mb-0.5">
-                      {profile.isRetired ? 'آخر نادي' : 'النادي الحالي'}
-                    </span>
-                    <span className="font-bold text-[#22C55E]">
-                      {profile.currentClub || profile.lastClub}
-                    </span>
-                  </div>
-                )}
-                {profile.age && profile.age !== 'غير متاح' && (
-                  <div>
-                    <span className="text-[#5C6B61] block mb-0.5">العمر / الميلاد</span>
-                    <span className="font-bold text-[#EEF2EF]">{profile.age}</span>
-                  </div>
-                )}
-                {profile.nationalTeam && profile.nationalTeam !== 'غير متاح' && (
-                  <div className="col-span-2 sm:col-span-2">
-                    <span className="text-[#5C6B61] block mb-0.5">المنتخب الوطني</span>
-                    <span className="font-bold text-[#EEF2EF]">{profile.nationalTeam}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+                  {/* 1. Basic Info */}
+                  {hasBasicInfo && (
+                    <div className="space-y-1.5">
+                      <h4 className="text-xs font-black text-[#22C55E] uppercase tracking-wider flex items-center gap-1.5">
+                        <span>📌</span> 1. المعلومات الأساسية
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs bg-[#171E1A]/80 p-3.5 rounded-2xl border border-[#212823]">
+                        {profile.nationality && profile.nationality !== 'غير متاح' && (
+                          <div>
+                            <span className="text-[#5C6B61] block mb-0.5">الجنسية</span>
+                            <span className="font-bold text-[#EEF2EF]">{profile.nationality}</span>
+                          </div>
+                        )}
+                        {profile.position && profile.position !== 'غير متاح' && (
+                          <div>
+                            <span className="text-[#5C6B61] block mb-0.5">المركز</span>
+                            <span className="font-bold text-[#EEF2EF]">{profile.position}</span>
+                          </div>
+                        )}
+                        {(profile.currentClub || profile.lastClub) && (
+                          <div>
+                            <span className="text-[#5C6B61] block mb-0.5">
+                              {profile.isRetired ? 'آخر نادي' : 'النادي الحالي'}
+                            </span>
+                            <span className="font-bold text-[#22C55E]">
+                              {profile.currentClub || profile.lastClub}
+                            </span>
+                          </div>
+                        )}
+                        {profile.age && profile.age !== 'غير متاح' && (
+                          <div>
+                            <span className="text-[#5C6B61] block mb-0.5">العمر / الميلاد</span>
+                            <span className="font-bold text-[#EEF2EF]">{profile.age}</span>
+                          </div>
+                        )}
+                        {profile.nationalTeam && profile.nationalTeam !== 'غير متاح' && (
+                          <div className="col-span-2 sm:col-span-2">
+                            <span className="text-[#5C6B61] block mb-0.5">المنتخب الوطني</span>
+                            <span className="font-bold text-[#EEF2EF]">{profile.nationalTeam}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
 
             {/* 2. Clubs & Career */}
             {profile.clubs && profile.clubs.filter((c) => c && c !== 'غير متاح').length > 0 && (

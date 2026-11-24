@@ -21,7 +21,7 @@ interface PlayerSearchProps {
 }
 
 interface SearchErrorInfo {
-  type: 'QUOTA_EXHAUSTED' | 'NETWORK_ERROR' | 'NOT_FOUND' | 'GENERIC';
+  type: 'TOO_GENERIC' | 'QUOTA_EXHAUSTED' | 'NETWORK_ERROR' | 'NOT_FOUND' | 'GENERIC';
   message: string;
   canDirectPlay: boolean;
   suggestedCandidate?: PlayerCandidate;
@@ -51,6 +51,11 @@ export const PlayerSearch: React.FC<PlayerSearchProps> = ({
   const [loading, setLoading] = useState(false);
   const [errorInfo, setErrorInfo] = useState<SearchErrorInfo | null>(null);
   const [candidates, setCandidates] = useState<PlayerCandidate[] | null>(null);
+  const [searchMeta, setSearchMeta] = useState<{
+    exactMatch: boolean;
+    ambiguous: boolean;
+    searchedQuery: string;
+  } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -83,6 +88,7 @@ export const PlayerSearch: React.FC<PlayerSearchProps> = ({
     setLoading(true);
     setErrorInfo(null);
     setCandidates(null);
+    setSearchMeta(null);
     if (!isAutoRetry) sounds.playClick();
 
     try {
@@ -98,6 +104,20 @@ export const PlayerSearch: React.FC<PlayerSearchProps> = ({
       );
 
       const data = await res.json();
+
+      // Check if name is too generic (e.g. "محمد محمد" or single common first name)
+      if (data.errorCode === 'TOO_GENERIC' || data.tooGeneric === true) {
+        sounds.playDeduct();
+        setErrorInfo({
+          type: 'TOO_GENERIC',
+          message:
+            data.error ||
+            'الاسم ده عام جدًا ومش كفاية لتحديد لاعب. من فضلك حدد تقصد مين واكتب الاسم كامل أو أضف لقب اللاعب أو ناديه.',
+          canDirectPlay: true,
+          suggestedCandidate: data.planB?.suggestedCandidate,
+        });
+        return;
+      }
 
       // Check if server returned quota exhaustion
       if (data.errorCode === 'QUOTA_EXHAUSTED') {
@@ -154,12 +174,17 @@ export const PlayerSearch: React.FC<PlayerSearchProps> = ({
         return;
       }
 
-      if (data.exactMatch && data.candidates && data.candidates.length === 1) {
+      if (data.exactMatch === true && data.candidates && data.candidates.length === 1) {
         sounds.playSuccess();
         onSelectCandidate(data.candidates[0]);
       } else if (data.candidates && data.candidates.length > 0) {
         sounds.playSelect();
         setCandidates(data.candidates);
+        setSearchMeta({
+          exactMatch: Boolean(data.exactMatch),
+          ambiguous: Boolean(data.ambiguous),
+          searchedQuery: q,
+        });
       } else {
         sounds.playDeduct();
         setErrorInfo({
@@ -257,9 +282,41 @@ export const PlayerSearch: React.FC<PlayerSearchProps> = ({
         </div>
       )}
 
-      {/* Structured Error States (Plan B / Retry / Clear Diagnostics) */}
+      {/* Structured Error States (Too Generic / Plan B / Retry / Clear Diagnostics) */}
       {errorInfo && !loading && (
         <div className="mb-5 animate-in fade-in duration-200">
+          {/* Case 0: Too Generic Name */}
+          {errorInfo.type === 'TOO_GENERIC' && (
+            <div className="p-5 rounded-2xl bg-amber-950/30 border border-amber-500/40 text-amber-200 shadow-xl space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0 mt-0.5">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-amber-300">
+                    من فضلك حدد أي لاعب تقصد
+                  </h4>
+                  <p className="text-xs text-amber-200/90 leading-relaxed mt-1">
+                    {errorInfo.message}
+                  </p>
+                </div>
+              </div>
+              {query.trim() && (
+                <button
+                  type="button"
+                  id="btn-generic-continue-unverified"
+                  onClick={() => {
+                    sounds.playSuccess();
+                    onSelectSecretInMind(query.trim());
+                  }}
+                  className="w-full py-2.5 px-4 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>المتابعة بالاسم المكتوب كلاعب غير مؤكد ({query.trim()})</span>
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Case 1: Quota Exhausted Alert */}
           {errorInfo.type === 'QUOTA_EXHAUSTED' && (
             <div className="p-5 rounded-2xl bg-amber-950/30 border border-amber-500/40 text-amber-200 shadow-xl space-y-3.5">
@@ -384,45 +441,113 @@ export const PlayerSearch: React.FC<PlayerSearchProps> = ({
         </div>
       )}
 
-      {/* Disambiguation List if multiple candidates */}
+      {/* Disambiguation / Non-Exact Match Confirmation List */}
       {candidates && candidates.length > 0 && !loading && (
         <div className="bg-[#131815] p-5 rounded-2xl border border-amber-500/30 mb-5 space-y-3 shadow-xl">
-          <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
-            <span>🤔</span>
-            <span>لقيت أكتر من لاعب بالاسم ده، تقصد مين؟</span>
+          <div className="flex items-start gap-2 text-amber-400 font-bold text-sm">
+            <span>{searchMeta && !searchMeta.exactMatch ? '⚠️' : '🤔'}</span>
+            <div>
+              {candidates.length > 1 ? (
+                <>
+                  <div>لقيت أكتر من لاعب بالاسم ده — اختر اللاعب المقصود</div>
+                  <p className="text-[11px] text-amber-200/80 font-medium mt-0.5">
+                    اضغط على اللاعب اللي تقصده من القائمة، أو تابع بالاسم المكتوب كلاعب غير مؤكد.
+                  </p>
+                </>
+              ) : searchMeta && !searchMeta.exactMatch ? (
+                <>
+                  <div>ليست مطابقة تامة — تأكد من اللاعب قبل اختياره</div>
+                  <p className="text-[11px] text-amber-200/80 font-medium mt-0.5">
+                    النتيجة التالية قريبة من الاسم المكتوب وليست مطابقة تامة. راجعها وأكّد الاختيار يدوياً أو تابع بالاسم المكتوب.
+                  </p>
+                </>
+              ) : (
+                <span>لقيت أكتر من لاعب بالاسم ده، تقصد مين؟</span>
+              )}
+            </div>
           </div>
           <div className="space-y-2">
-            {candidates.map((cand) => (
+            {candidates.map((cand) => {
+              const club = cand.currentClubOrLast?.trim() || '';
+              const nat = cand.nationality?.trim() || '';
+              const pos = cand.position?.trim() || '';
+              const statusText =
+                typeof cand.isRetired === 'boolean'
+                  ? cand.isRetired
+                    ? 'معتزل'
+                    : 'لاعب حالي'
+                  : '';
+              const note = cand.eraOrNote?.trim() || '';
+              const showStatusSeparately = Boolean(
+                statusText && note !== statusText && !note.includes(statusText)
+              );
+              const detailItems: Array<{ text: string; highlight?: boolean }> = [];
+              if (club) detailItems.push({ text: club, highlight: true });
+              if (nat) detailItems.push({ text: nat });
+              if (pos) detailItems.push({ text: pos });
+              if (showStatusSeparately) detailItems.push({ text: statusText });
+
+              return (
+                <button
+                  key={cand.id || cand.name}
+                  id={`candidate-${cand.id}`}
+                  onClick={() => {
+                    sounds.playSuccess();
+                    onSelectCandidate(cand);
+                  }}
+                  className="w-full p-3.5 rounded-xl bg-[#171E1A] hover:bg-[#1C2520] border border-[#212823] hover:border-[#22C55E]/60 text-right flex items-center justify-between gap-2 transition-all cursor-pointer group"
+                >
+                  <div>
+                    <div className="font-black text-sm text-[#EEF2EF] group-hover:text-[#22C55E] transition-colors">
+                      {cand.displayName}
+                    </div>
+                    {detailItems.length > 0 && (
+                      <div className="text-xs text-[#8FA095] flex items-center gap-2 mt-0.5 flex-wrap">
+                        {detailItems.map((item, idx) => (
+                          <React.Fragment key={idx}>
+                            {idx > 0 && <span>•</span>}
+                            <span className={item.highlight ? 'text-[#EEF2EF]/90 font-medium' : ''}>
+                              {item.text}
+                            </span>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                    )}
+                    {note && (
+                      <div className="text-[11px] text-amber-300/80 mt-1">
+                        {note}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {searchMeta && !searchMeta.exactMatch && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30">
+                        تأكيد الاختيار
+                      </span>
+                    )}
+                    <ArrowLeft className="w-4 h-4 text-[#5C6B61] group-hover:text-[#22C55E] transition-colors" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+          {searchMeta && (!searchMeta.exactMatch || candidates.length > 1) && searchMeta.searchedQuery && (
+            <div className="pt-2 border-t border-[#212823]">
               <button
-                key={cand.id || cand.name}
-                id={`candidate-${cand.id}`}
+                type="button"
+                id="btn-continue-unverified-typed-name"
                 onClick={() => {
                   sounds.playSuccess();
-                  onSelectCandidate(cand);
+                  onSelectSecretInMind(searchMeta.searchedQuery);
                 }}
-                className="w-full p-3.5 rounded-xl bg-[#171E1A] hover:bg-[#1C2520] border border-[#212823] hover:border-[#22C55E]/60 text-right flex items-center justify-between transition-all cursor-pointer group"
+                className="w-full py-2.5 px-4 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >
-                <div>
-                  <div className="font-black text-sm text-[#EEF2EF] group-hover:text-[#22C55E] transition-colors">
-                    {cand.displayName}
-                  </div>
-                  <div className="text-xs text-[#8FA095] flex items-center gap-2 mt-0.5">
-                    <span>{cand.nationality}</span>
-                    <span>•</span>
-                    <span>{cand.position}</span>
-                    <span>•</span>
-                    <span className="text-[#EEF2EF]/90 font-medium">{cand.currentClubOrLast}</span>
-                  </div>
-                  {cand.eraOrNote && (
-                    <div className="text-[11px] text-amber-300/80 mt-1">
-                      {cand.eraOrNote}
-                    </div>
-                  )}
-                </div>
-                <ArrowLeft className="w-4 h-4 text-[#5C6B61] group-hover:text-[#22C55E] transition-colors" />
+                <span>
+                  المتابعة بالاسم المكتوب كلاعب غير مؤكد ({searchMeta.searchedQuery})
+                </span>
               </button>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
 
