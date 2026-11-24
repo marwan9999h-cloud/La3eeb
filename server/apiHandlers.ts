@@ -7,9 +7,9 @@ import {
   FAMOUS_PLAYERS_DB,
   StoredPlayer,
   searchFuzzy,
-} from './playerDatabase';
-import { PLAYERS_INDEX, searchPlayersIndex } from './playersIndex';
-import { normalizeProfile, createUnavailableProfile } from './profileUtils';
+} from './playerDatabase.js';
+import { PLAYERS_INDEX, searchPlayersIndex } from './playersIndex.js';
+import { normalizeProfile, createUnavailableProfile } from './profileUtils.js';
 
 /**
  * NOTE FOR SERVERLESS (Vercel):

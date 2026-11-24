@@ -1,4 +1,4 @@
-import { applySecurityHeaders, healthHandler } from '../server/apiHandlers';
+import { applySecurityHeaders, healthHandler } from '../server/apiHandlers.js';
 
 export default async function handler(req: any, res: any) {
   applySecurityHeaders(res);

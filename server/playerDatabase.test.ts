@@ -7,9 +7,9 @@ import {
   validateDatabase,
   searchBuiltinPlayers,
   FAMOUS_PLAYERS_DB,
-} from './playerDatabase';
-import { PLAYERS_INDEX } from './playersIndex';
-import { normalizeProfile } from './profileUtils';
+} from './playerDatabase.js';
+import { PLAYERS_INDEX } from './playersIndex.js';
+import { normalizeProfile } from './profileUtils.js';
 
 describe('Player Database & Age Utilities', () => {
   const fixedNow = new Date('2026-10-22T12:00:00Z');

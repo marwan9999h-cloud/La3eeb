@@ -1,4 +1,4 @@
-import { computeAge } from './playerDatabase';
+import { computeAge } from './playerDatabase.js';
 
 export function normalizeProfile(
   raw: any,

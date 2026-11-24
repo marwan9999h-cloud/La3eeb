@@ -1,4 +1,4 @@
-import { normalizeSearch, stripAl } from './playerDatabase';
+import { normalizeSearch, stripAl } from './playerDatabase.js';
 
 export interface IndexPlayer {
   id: string;

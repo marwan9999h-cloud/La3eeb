@@ -2,7 +2,7 @@ import {
   applySecurityHeaders,
   parseJsonBodySafe,
   playerProfileHandler,
-} from '../server/apiHandlers';
+} from '../server/apiHandlers.js';
 
 export default async function handler(req: any, res: any) {
   applySecurityHeaders(res);

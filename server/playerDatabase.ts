@@ -36,8 +36,8 @@ export interface StoredPlayer {
   eraOrNote?: string;
 }
 
-import { EXTRA_FAMOUS_PLAYERS } from './playersDataExtended';
-import { PLAYERS_INDEX } from './playersIndex';
+import { EXTRA_FAMOUS_PLAYERS } from './playersDataExtended.js';
+import { PLAYERS_INDEX } from './playersIndex.js';
 
 const CORE_FAMOUS_PLAYERS: StoredPlayer[] = [
   {

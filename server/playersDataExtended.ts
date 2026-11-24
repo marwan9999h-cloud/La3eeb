@@ -1,4 +1,4 @@
-import { StoredPlayer } from './playerDatabase';
+import { StoredPlayer } from './playerDatabase.js';
 
 export const EXTRA_FAMOUS_PLAYERS: StoredPlayer[] = [
   // --- حراس مرمى أساطير ونجوم ---
