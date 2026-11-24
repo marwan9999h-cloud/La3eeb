@@ -29,6 +29,7 @@ import {
   EXTRA_GUESS_COST,
   NOBODY_WON_PICKER_POINTS,
   calcCorrectGuessPoints,
+  buildSecretProfile,
 } from './utils/scoring';
 
 const STORAGE_KEY = 'guess_the_player_game_state_v3';
@@ -621,32 +622,7 @@ export const App: React.FC = () => {
 
   // 5b. Direct Secret In-Mind Player (Offline / Zero-Search) -> Ready Screen
   const handleSelectSecretPlayer = (customName?: string) => {
-    const trimmedCustom = customName?.trim();
-    const hasCustomName = Boolean(trimmedCustom);
-    const chosenName = trimmedCustom || 'لاعب في السر';
-    const secretProfile: PlayerProfile = {
-      playerName: chosenName,
-      displayName: chosenName,
-      aliases: [chosenName],
-      nationality: hasCustomName ? 'غير متاح' : 'في السر (يحدده صاحب الجولة)',
-      position: hasCustomName ? 'غير متاح' : 'في السر (يحدده صاحب الجولة)',
-      isRetired: false,
-      clubs: hasCustomName ? [] : ['سري'],
-      leagues: hasCustomName ? [] : ['سري'],
-      trophies: hasCustomName ? [] : ['سري'],
-      keyStats: hasCustomName ? [] : ['تم اختيار هذا اللاعب في السر دون بحث.'],
-      careerFacts: hasCustomName
-        ? []
-        : [
-            'صاحب الجولة اختار هذا اللاعب في سره.',
-            'يقوم الزملاء بتوجيه الأسئلة إليه ويجيبهم بنعم أو لا.',
-          ],
-      verifiedFacts: hasCustomName ? [] : ['لاعب سري في ذهن صاحب الجولة'],
-      nationalTeam: hasCustomName ? '' : 'سري',
-      verification: 'unverified',
-      sources: [],
-      isCustomOrSecret: true,
-    };
+    const secretProfile: PlayerProfile = buildSecretProfile(customName);
 
     setCurrentProfile(secretProfile);
     setSelectedCandidate(null);

@@ -1,3 +1,4 @@
+import { buildSecretProfile, clubLabel } from './scoring';
 import { describe, it, expect } from 'vitest';
 import {
   CORRECT_GUESS_BASE,
@@ -58,3 +59,28 @@ describe('Scoring Logic', () => {
     });
   });
 });
+
+describe('secret / typed-name profile', () => {
+  it('never claims a known retirement status', () => {
+    expect(buildSecretProfile('Hany Said Elsayed').isRetiredKnown).toBe(false);
+    expect(buildSecretProfile().isRetiredKnown).toBe(false);
+  });
+  it('is marked unverified and custom', () => {
+    const p = buildSecretProfile('  Hany Said Elsayed ');
+    expect(p.playerName).toBe('Hany Said Elsayed');
+    expect(p.verification).toBe('unverified');
+    expect(p.isCustomOrSecret).toBe(true);
+  });
+});
+
+describe('clubLabel', () => {
+  it('is neutral when status unknown', () => {
+    expect(clubLabel({ isRetired: false, isRetiredKnown: false })).toBe('النادي');
+  });
+  it('keeps known labels', () => {
+    expect(clubLabel({ isRetired: false, isRetiredKnown: true })).toBe('النادي الحالي');
+    expect(clubLabel({ isRetired: true, isRetiredKnown: true })).toBe('آخر نادي');
+    expect(clubLabel({ isRetired: true })).toBe('آخر نادي');
+  });
+});
+

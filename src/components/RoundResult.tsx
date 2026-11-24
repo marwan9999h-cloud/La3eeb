@@ -1,3 +1,4 @@
+import { clubLabel } from '../utils/scoring';
 import React from 'react';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { Player, PlayerProfile, RoundEndReason } from '../types';
@@ -127,7 +128,7 @@ export const RoundResult: React.FC<RoundResultProps> = ({
             </div>
             <div className="col-span-2 pt-1.5 border-t border-[#212823]">
               <span className="text-[#5C6B61] block mb-0.5">
-                {profile.isRetired ? 'آخر نادي' : 'النادي الحالي'}
+                {clubLabel(profile)}
               </span>
               <span className="font-bold text-[#EEF2EF]">
                 {profile.currentClub || profile.lastClub}
