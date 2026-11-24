@@ -1783,7 +1783,8 @@ export async function searchPlayerHandler(req: any, res: any) {
         p.currentClub || p.lastClub || (p.clubs && p.clubs.length > 0 ? p.clubs[p.clubs.length - 1] : '')
       ),
       isRetired: p.isRetired,
-      eraOrNote: p.eraOrNote || (p.isRetired ? 'معتزل' : 'لاعب حالي'),
+      eraOrNote:
+        p.eraOrNote || (p.isRetired === true ? 'معتزل' : p.isRetired === false ? 'لاعب حالي' : ''),
       _sourceTier: 4,
       _priority: isExactFullNameMatch(p, effectiveNameQuery) ? 100 : 80,
       _contextScore: computeContextMatchScore(
@@ -1800,7 +1801,7 @@ export async function searchPlayerHandler(req: any, res: any) {
       position: cleanCandidateField(p.position),
       currentClubOrLast: '', // Unknown in index — leave blank, do not guess
       isRetired: p.isRetired,
-      eraOrNote: p.isRetired ? 'معتزل' : 'لاعب حالي',
+      eraOrNote: p.isRetired === true ? 'معتزل' : p.isRetired === false ? 'لاعب حالي' : '',
       _sourceTier: 3,
       _priority: isExactFullNameMatch(p, effectiveNameQuery) ? 70 : 50,
       _contextScore: computeContextMatchScore(
@@ -2073,7 +2074,8 @@ export async function searchPlayerHandler(req: any, res: any) {
             (p.clubs && p.clubs.length > 0 ? p.clubs[p.clubs.length - 1] : '')
         ),
         isRetired: p.isRetired,
-        eraOrNote: p.eraOrNote || (p.isRetired ? 'معتزل' : 'لاعب حالي'),
+        eraOrNote:
+        p.eraOrNote || (p.isRetired === true ? 'معتزل' : p.isRetired === false ? 'لاعب حالي' : ''),
       }));
 
       const fuzzyResult = {
@@ -2246,7 +2248,7 @@ export async function playerProfileHandler(req: any, res: any) {
       }.
 ${sourceInstructions}
 ممنوع توليد أي أسئلة أو ألغاز. أعد النتيجة بصيغة JSON فقط بهذا الهيكل (واترك أي حقل غير معروف فارغاً "" أو []):
-{"profile":{"playerName":"${cleanPlayerName}","displayName":"${cleanDisplayName}","aliases":["ألقاب"],"nationality":"","birthDate":"","shirtNumber":"","position":"","isRetired":false,"currentClub":"","lastClub":"","clubs":[],"leagues":[],"transfers":[],"careerTimeline":[],"nationalTeam":"","internationalCaps":"","internationalGoals":"","internationalTournaments":[],"leagueTitles":[],"cups":[],"internationalTrophies":[],"individualAwards":[],"trophies":[],"appearances":"","goals":"","assists":"","keyStats":[],"careerFacts":[],"notableTeammates":[],"notableManagers":[],"importantMatches":[],"verifiedFacts":[]}}`;
+{"profile":{"playerName":"${cleanPlayerName}","displayName":"${cleanDisplayName}","aliases":["ألقاب"],"nationality":"","birthDate":"","shirtNumber":"","position":"","isRetired":null,"currentClub":"","lastClub":"","clubs":[],"leagues":[],"transfers":[],"careerTimeline":[],"nationalTeam":"","internationalCaps":"","internationalGoals":"","internationalTournaments":[],"leagueTitles":[],"cups":[],"internationalTrophies":[],"individualAwards":[],"trophies":[],"appearances":"","goals":"","assists":"","keyStats":[],"careerFacts":[],"notableTeammates":[],"notableManagers":[],"importantMatches":[],"verifiedFacts":[]}}`;
 
       const finalizeAiProfile = (rawProfile: any, provider: 'groq' | 'gemini') => {
         rawProfile.researchMode = 'ai_knowledge';

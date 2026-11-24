@@ -360,9 +360,11 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
                 {generatedProfile.playerName}
               </span>
             </div>
-            <span className="text-xs font-bold px-3 py-1 rounded-xl bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30">
-              {generatedProfile.isRetired ? 'معتزل' : 'لاعب حالي'}
-            </span>
+            {generatedProfile.isRetiredKnown !== false && (
+              <span className="text-xs font-bold px-3 py-1 rounded-xl bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30">
+                {generatedProfile.isRetired ? 'معتزل' : 'لاعب حالي'}
+              </span>
+            )}
           </div>
 
           {/* Section 1: Basic Information */}
@@ -387,7 +389,7 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
                 {(generatedProfile.currentClub || generatedProfile.lastClub) && (
                   <div>
                     <span className="text-[#5C6B61] block mb-0.5">
-                      {generatedProfile.isRetired ? 'آخر نادي' : 'النادي الحالي'}
+                      {generatedProfile.isRetiredKnown === false ? 'النادي' : generatedProfile.isRetired ? 'آخر نادي' : 'النادي الحالي'}
                     </span>
                     <span className="font-bold text-[#22C55E]">
                       {generatedProfile.currentClub || generatedProfile.lastClub}
@@ -496,7 +498,7 @@ export const PlayerConfirm: React.FC<PlayerConfirmProps> = ({
           )}
 
           {/* Section 6: Additional Facts & Teammates */}
-          {((generatedProfile.verifiedFacts?.length || generatedProfile.notableTeammates?.length) ?? false) && (
+          {Boolean(generatedProfile.verifiedFacts?.length || generatedProfile.notableTeammates?.length) && (
             <div className="space-y-1.5">
               <h4 className="text-xs font-black text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
                 <span>💡</span> 5. حقائق كروية وزملاء

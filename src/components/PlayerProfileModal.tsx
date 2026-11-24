@@ -147,11 +147,13 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
                           {profile.playerName}
                         </span>
                       </div>
-                      <span className="text-xs font-bold px-3 py-1 rounded-xl bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30">
-                        {profile.isRetired ? 'معتزل' : 'لاعب حالي'}
-                      </span>
+                      {profile.isRetiredKnown !== false && (
+                        <span className="text-xs font-bold px-3 py-1 rounded-xl bg-[#22C55E]/15 text-[#22C55E] border border-[#22C55E]/30">
+                          {profile.isRetired ? 'معتزل' : 'لاعب حالي'}
+                        </span>
+                      )}
                     </div>
-                    {!profile.isRetired && profile.researchMode !== 'unavailable' && (
+                    {profile.isRetiredKnown !== false && !profile.isRetired && profile.researchMode !== 'unavailable' && (
                       <p className="text-[11px] text-[#5C6B61] mt-2 pt-2 border-t border-[#212823]/60">
                         النادي والأرقام ممكن تكون اتغيرت — راجعها قبل ما تحسم.
                       </p>
@@ -180,7 +182,7 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
                         {(profile.currentClub || profile.lastClub) && (
                           <div>
                             <span className="text-[#5C6B61] block mb-0.5">
-                              {profile.isRetired ? 'آخر نادي' : 'النادي الحالي'}
+                              {profile.isRetiredKnown === false ? 'النادي' : profile.isRetired ? 'آخر نادي' : 'النادي الحالي'}
                             </span>
                             <span className="font-bold text-[#22C55E]">
                               {profile.currentClub || profile.lastClub}
@@ -379,3 +381,4 @@ export const PlayerProfileModal: React.FC<PlayerProfileModalProps> = ({
     </div>
   );
 };
+

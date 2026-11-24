@@ -56,6 +56,8 @@ export interface PlayerProfile {
   shirtNumber?: string | number;
   position: string;
   isRetired: boolean;
+  /** false when the retired/current status was not stated by any source. Omitted means known. */
+  isRetiredKnown?: boolean;
   currentClub?: string;
   lastClub?: string;
   clubs: string[];

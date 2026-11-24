@@ -270,6 +270,84 @@ describe('API Handlers Provider Order & Groq Integration', () => {
     expect(res.body.profile.sources).toEqual([]);
   });
 
+  it('profile response marks status unknown when the AI returns null for isRetired', async () => {
+    process.env.GROQ_API_KEY = 'test-groq-key';
+    globalThis.fetch = vi.fn(async (url: string) => {
+      if (url.includes('wikipedia.org')) {
+        return new Response(JSON.stringify({ query: { search: [] } }), { status: 200 });
+      }
+      if (url === 'https://api.groq.com/openai/v1/chat/completions') {
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    profile: { playerName: 'Obscure Player', displayName: 'لاعب مغمور', isRetired: null, clubs: [] },
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response('{}', { status: 404 });
+    }) as any;
+    const res = createMockRes();
+    await playerProfileHandler(
+      {
+        body: { playerName: 'Obscure Player', displayName: 'لاعب مغمور' },
+        headers: {},
+        socket: { remoteAddress: '127.0.1.1' },
+      },
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.profile.researchMode).toBe('ai_knowledge');
+    expect(res.body.profile.isRetiredKnown).toBe(false);
+    expect(res.body.profile.isRetired).toBe(false);
+  });
+
+  it('profile response keeps an explicit retired status as known', async () => {
+    process.env.GROQ_API_KEY = 'test-groq-key';
+    globalThis.fetch = vi.fn(async (url: string) => {
+      if (url.includes('wikipedia.org')) {
+        return new Response(JSON.stringify({ query: { search: [] } }), { status: 200 });
+      }
+      if (url === 'https://api.groq.com/openai/v1/chat/completions') {
+        return new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: JSON.stringify({
+                    profile: { playerName: 'Obscure Player', displayName: 'لاعب مغمور', isRetired: true, clubs: [] },
+                  }),
+                },
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      }
+      return new Response('{}', { status: 404 });
+    }) as any;
+    const res = createMockRes();
+    await playerProfileHandler(
+      {
+        body: { playerName: 'Obscure Player', displayName: 'لاعب مغمور' },
+        headers: {},
+        socket: { remoteAddress: '127.0.1.2' },
+      },
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body.profile.researchMode).toBe('ai_knowledge');
+    expect(res.body.profile.isRetiredKnown).toBe(true);
+    expect(res.body.profile.isRetired).toBe(true);
+  });
+
   it('falls back to backup Groq model on 429 and returns generic quota message if all fail', async () => {
     process.env.GROQ_API_KEY = 'test-groq-key';
     const calledModels: string[] = [];
@@ -1754,4 +1832,33 @@ describe('mergeCandidatesList identity safety', () => {
     ] as any);
     expect(out).toHaveLength(2);
   });
+
+  it('keeps same-name same-country same-club teammates separate when source pages differ', () => {
+    const out = mergeCandidatesList([
+      mergeWiki('Sami Invented', { nationality: 'مصر', currentClubOrLast: 'الأهلي' }),
+      mergeWiki('Sami Invented (footballer, born 1999)', {
+        name: 'Sami Invented',
+        displayName: 'Sami Invented',
+        nationality: 'مصر',
+        currentClubOrLast: 'الأهلي',
+      }),
+    ] as any);
+    expect(out).toHaveLength(2);
+  });
 });
+
+describe('profile status is never invented', () => {
+  it('marks status unknown when the source gives no boolean', () => {
+    const p = normalizeProfile({ playerName: 'Invented Player', isRetired: null });
+    expect(p.isRetiredKnown).toBe(false);
+    const q = normalizeProfile({ playerName: 'Invented Player' });
+    expect(q.isRetiredKnown).toBe(false);
+  });
+  it('keeps explicit status as known', () => {
+    expect(normalizeProfile({ playerName: 'A', isRetired: false }).isRetiredKnown).toBe(true);
+    const r = normalizeProfile({ playerName: 'B', isRetired: true });
+    expect(r.isRetiredKnown).toBe(true);
+    expect(r.isRetired).toBe(true);
+  });
+});
+

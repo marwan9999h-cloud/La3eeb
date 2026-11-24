@@ -6,6 +6,8 @@ export function normalizeProfile(
 ): any {
   const p = raw || {};
   const isRetired = Boolean(p.isRetired);
+  // Status is only known when the source gave an explicit boolean; never invent a default.
+  const isRetiredKnown = typeof p.isRetired === 'boolean';
 
   // Clean arrays: max 30 items, each item string trimmed and sliced to 200 chars
   const cleanArray = (arr: any, maxLen = 30): string[] => {
@@ -72,6 +74,7 @@ export function normalizeProfile(
         : undefined,
     position: cleanString(p.position, 'غير متاح'),
     isRetired,
+    isRetiredKnown,
     currentClub: isRetired ? undefined : cleanString(p.currentClub, '') || undefined,
     lastClub: cleanString(p.lastClub, '') || undefined,
     clubs: cleanArray(p.clubs, 30),
@@ -155,3 +158,4 @@ export function createUnavailableProfile(names: {
     sources: [],
   };
 }
+
