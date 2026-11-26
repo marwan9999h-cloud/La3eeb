@@ -10,8 +10,8 @@ export default defineConfig(() => {
       react(),
       tailwindcss(),
       VitePWA({
-        // 'prompt' ensures the app notifies the user when an update is ready rather than reloading mid-game
-        registerType: 'prompt',
+        // 'autoUpdate' applies updates silently in the background: no update popup, players get the new version on next open
+        registerType: 'autoUpdate',
         includeAssets: [
           'apple-touch-icon.png',
           'icon.svg',
@@ -61,8 +61,8 @@ export default defineConfig(() => {
           navigateFallback: 'index.html',
           navigateFallbackDenylist: [/^\/api\/.*/],
           cleanupOutdatedCaches: true,
-          clientsClaim: false,
-          skipWaiting: false,
+          clientsClaim: true,
+          skipWaiting: true,
           runtimeCaching: [
             {
               // Google Fonts Stylesheet
