@@ -1,11 +1,12 @@
 import React from 'react';
-import { Play, HelpCircle, Settings, ArrowLeft, Flame } from 'lucide-react';
+import { Play, HelpCircle, Settings, ArrowLeft, Flame, GraduationCap } from 'lucide-react';
 import { sounds } from '../utils/sound';
 import { PWAInstallButton } from './PWAInstallButton';
 
 interface HomeScreenProps {
   onStartGame: () => void;
   onOpenRules: () => void;
+  onOpenTutorial: () => void;
   onOpenSettings: () => void;
   onOpenDaily: () => void;
 }
@@ -13,6 +14,7 @@ interface HomeScreenProps {
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartGame,
   onOpenRules,
+  onOpenTutorial,
   onOpenSettings,
   onOpenDaily,
 }) => {
@@ -94,6 +96,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <div className="relative z-10 w-full max-w-xs flex flex-col items-center gap-3 pt-2 pb-1">
         {/* Prominent mobile install prompt when installable */}
         <PWAInstallButton variant="home" />
+
+        {/* First-run walkthrough, reopenable any time */}
+        <button
+          id="btn-home-tutorial"
+          onClick={() => {
+            sounds.playClick();
+            onOpenTutorial();
+          }}
+          className="w-full py-2.5 px-4 rounded-xl bg-[#131815]/80 hover:bg-[#171E1A] text-[#22C55E] hover:text-[#35C759] border border-[#22C55E]/30 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer min-h-[44px]"
+        >
+          <GraduationCap className="w-4 h-4" />
+          <span>كيف تلعب؟ شرح سريع خطوة بخطوة</span>
+        </button>
 
         <div className="w-full flex items-center justify-center gap-3">
           <button
