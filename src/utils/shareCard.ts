@@ -253,6 +253,149 @@ export async function renderGameOverShareCard(
   });
 }
 
+/* ---------- Daily challenge share card ---------- */
+
+export interface DailyShareModel {
+  score: number;
+  total: number;
+  streak: number;
+  streakLine: string;
+  headline: string;
+  scoreLine: string;
+  footerUrl: string;
+}
+
+/** Headline for a finished daily challenge. */
+export function dailyHeadline(score: number, total: number): string {
+  if (total <= 0) return 'تحدي اليوم خلص ⚽';
+  if (score >= total) return 'علامة كاملة في تحدي اليوم! 🔥';
+  if (score === total - 1) return 'قريب من العلامة الكاملة 👏';
+  if (score <= 0) return 'التحدي كان صعب النهارده 😅';
+  return 'تحدي اليوم خلص ⚽';
+}
+
+/** Pure data for the daily-challenge share card. */
+export function buildDailyShareModel(
+  score: number,
+  total: number,
+  streak: number
+): DailyShareModel {
+  const safeScore = Math.max(0, Math.floor(score || 0));
+  const safeTotal = Math.max(0, Math.floor(total || 0));
+  const safeStreak = Math.max(0, Math.floor(streak || 0));
+  const streakLine =
+    safeStreak >= 2
+      ? `🔥 سلسلة: ${safeStreak} أيام ورا بعض`
+      : safeStreak === 1
+        ? '🔥 أول يوم في السلسلة'
+        : 'ابدأ سلسلتك النهارده';
+  return {
+    score: safeScore,
+    total: safeTotal,
+    streak: safeStreak,
+    streakLine,
+    headline: dailyHeadline(safeScore, safeTotal),
+    scoreLine: `${safeScore} من ${safeTotal} إجابات صح`,
+    footerUrl: SHARE_CARD_URL,
+  };
+}
+
+/** Renders the daily-challenge model to a PNG blob. */
+export async function renderDailyShareCard(model: DailyShareModel): Promise<Blob> {
+  try {
+    await (document as Document).fonts?.ready;
+  } catch {
+    // fonts API unavailable: draw with fallbacks
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = SHARE_CARD_WIDTH;
+  canvas.height = SHARE_CARD_HEIGHT;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D غير متاح على الجهاز ده');
+
+  const W = SHARE_CARD_WIDTH;
+  const cx = W / 2;
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.fillStyle = COLOR_BG;
+  ctx.fillRect(0, 0, W, SHARE_CARD_HEIGHT);
+  const glow = ctx.createRadialGradient(cx, 420, 40, cx, 420, 780);
+  glow.addColorStop(0, 'rgba(34,197,94,0.22)');
+  glow.addColorStop(1, 'rgba(34,197,94,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, SHARE_CARD_HEIGHT);
+
+  ctx.fillStyle = COLOR_GREEN;
+  ctx.fillRect(0, 0, W, 14);
+
+  ctx.font = `80px ${FONT_STACK}`;
+  ctx.fillText('⚽', cx, 140);
+  ctx.fillStyle = COLOR_TEXT;
+  ctx.font = `900 66px ${FONT_STACK}`;
+  ctx.fillText('خَمِّن اللاعب', cx, 232);
+  ctx.fillStyle = COLOR_MUTED;
+  ctx.font = `800 40px ${FONT_STACK}`;
+  ctx.fillText('تحدي اليوم 🔥', cx, 304);
+
+  // Score hero
+  const heroY = 380;
+  const heroH = 420;
+  ctx.fillStyle = COLOR_CARD;
+  roundRect(ctx, 60, heroY, W - 120, heroH, 36);
+  ctx.fill();
+  ctx.strokeStyle = COLOR_GREEN;
+  ctx.lineWidth = 5;
+  roundRect(ctx, 60, heroY, W - 120, heroH, 36);
+  ctx.stroke();
+  ctx.fillStyle = COLOR_GREEN;
+  ctx.fillRect(60, heroY, W - 120, 10);
+
+  ctx.fillStyle = COLOR_MUTED;
+  const headSize = fitFontSize(ctx, model.headline, 800, 44, W - 220);
+  ctx.font = `800 ${headSize}px ${FONT_STACK}`;
+  ctx.fillText(model.headline, cx, heroY + 84);
+
+  ctx.fillStyle = COLOR_GREEN;
+  ctx.font = `900 190px ${FONT_STACK}`;
+  ctx.fillText(`${model.score}/${model.total}`, cx, heroY + 220);
+
+  ctx.fillStyle = COLOR_TEXT;
+  ctx.font = `700 42px ${FONT_STACK}`;
+  ctx.fillText(model.scoreLine, cx, heroY + 340);
+
+  // Streak band
+  const bandY = heroY + heroH + 56;
+  ctx.fillStyle = COLOR_CARD_INNER;
+  roundRect(ctx, 60, bandY, W - 120, 120, 30);
+  ctx.fill();
+  ctx.strokeStyle = COLOR_BORDER;
+  ctx.lineWidth = 3;
+  roundRect(ctx, 60, bandY, W - 120, 120, 30);
+  ctx.stroke();
+  ctx.fillStyle = COLOR_TEXT;
+  ctx.font = `800 44px ${FONT_STACK}`;
+  ctx.fillText(model.streakLine, cx, bandY + 62);
+
+  // Footer pill
+  const pillY = SHARE_CARD_HEIGHT - 150;
+  ctx.fillStyle = COLOR_GREEN;
+  roundRect(ctx, cx - 460, pillY, 920, 96, 48);
+  ctx.fill();
+  ctx.fillStyle = COLOR_BG;
+  ctx.font = `900 38px ${FONT_STACK}`;
+  ctx.fillText(`جرب تحدي النهارده 👈 ${model.footerUrl}`, cx, pillY + 52);
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('فشل تجهيز صورة الكارت'));
+    }, 'image/png');
+  });
+}
+
 export type ShareOutcome = 'shared' | 'downloaded' | 'cancelled';
 
 /** Shares the PNG through the native sheet when possible, otherwise downloads it. */
@@ -269,8 +412,8 @@ export async function shareOrDownloadCard(
     if (nav.canShare && nav.share && nav.canShare({ files: [file] })) {
       await nav.share({
         files: [file],
-        title: 'نتيجة لعبة خَمِّن اللاعب',
-        text: `نتيجة قعدتنا في خَمِّن اللاعب ⚽ ${SHARE_CARD_URL}`,
+        title: 'خَمِّن اللاعب ⚽',
+        text: `خَمِّن اللاعب ⚽ ${SHARE_CARD_URL}`,
       });
       return 'shared';
     }
