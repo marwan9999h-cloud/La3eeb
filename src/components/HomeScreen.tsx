@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, HelpCircle, Settings, ArrowLeft } from 'lucide-react';
+import { Play, HelpCircle, Settings, ArrowLeft, Flame } from 'lucide-react';
 import { sounds } from '../utils/sound';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -7,12 +7,14 @@ interface HomeScreenProps {
   onStartGame: () => void;
   onOpenRules: () => void;
   onOpenSettings: () => void;
+  onOpenDaily: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({
   onStartGame,
   onOpenRules,
   onOpenSettings,
+  onOpenDaily,
 }) => {
   return (
     <div className="relative w-full max-w-xl mx-auto px-4 py-8 sm:py-12 flex flex-col items-center justify-between min-h-[calc(100vh-4.5rem)] select-none overflow-hidden text-center">
@@ -71,6 +73,19 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <Play className="w-5 h-5 fill-current" />
             <span>ابدأ اللعبة</span>
             <ArrowLeft className="w-5 h-5 stroke-[2.5] transition-transform duration-200 group-hover:-translate-x-1" />
+          </button>
+
+          {/* Daily Challenge Entry */}
+          <button
+            id="btn-open-daily"
+            onClick={() => {
+              sounds.playSelect();
+              onOpenDaily();
+            }}
+            className="mt-3 w-full py-3 px-6 rounded-2xl bg-[#22C55E]/10 hover:bg-[#22C55E]/15 active:bg-[#22C55E]/20 text-[#22C55E] border-2 border-[#22C55E]/40 font-black text-sm sm:text-base flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98]"
+          >
+            <Flame className="w-4.5 h-4.5 stroke-[2.5]" />
+            <span>تحدي اليوم: 5 أسئلة جديدة كل يوم</span>
           </button>
         </div>
       </div>
