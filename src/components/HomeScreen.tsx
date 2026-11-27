@@ -109,9 +109,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         {/* Creator Signature */}
         <div
           dir="ltr"
-          className="flex items-center justify-center gap-1.5 opacity-40 hover:opacity-75 transition-opacity duration-300 pointer-events-none select-none tracking-[0.22em] text-[10px] text-[#8FA095] font-medium uppercase"
+          className="flex items-center justify-center gap-1.5 opacity-70 transition-opacity duration-300 pointer-events-none select-none tracking-[0.12em] text-[11px] text-[#8FA095] font-medium normal-case"
         >
           <span className="w-1 h-1 rounded-full bg-[#22C55E]/80 inline-block" />
+          <span>By : Marwan M. Hammad</span>
         </div>
       </div>
     </div>
