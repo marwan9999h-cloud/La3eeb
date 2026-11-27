@@ -4,6 +4,7 @@ import { RotateCcw } from 'lucide-react';
 import { Player } from '../types';
 import { sounds } from '../utils/sound';
 import { rankPlayers } from '../utils/ranking';
+import { ShareResultButton } from './ShareResultButton';
 
 interface GameOverProps {
   players: Player[];
@@ -130,6 +131,11 @@ export const GameOver: React.FC<GameOverProps> = ({
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Share Result Card */}
+      <div className="mb-3">
+        <ShareResultButton players={players} totalRounds={totalRounds} />
       </div>
 
       {/* Play Again Button */}
