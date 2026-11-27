@@ -12,6 +12,7 @@ import { HomeScreen } from './components/HomeScreen';
 import { SettingsModal } from './components/SettingsModal';
 import { RulesModal } from './components/RulesModal';
 import { DailyChallenge } from './components/DailyChallenge';
+import { Tutorial } from './components/Tutorial';
 import { SetupPlayers } from './components/SetupPlayers';
 import { SetupRules } from './components/SetupRules';
 import { RoundIntro } from './components/RoundIntro';
@@ -32,6 +33,8 @@ import {
   calcCorrectGuessPoints,
   buildSecretProfile,
 } from './utils/scoring';
+import { HINTS_PER_PLAYER, buildHintDeck, type HintCard } from './utils/hints';
+import { hasSeenTutorial, markTutorialSeen } from './utils/tutorial';
 
 const STORAGE_KEY = 'guess_the_player_game_state_v3';
 
@@ -63,6 +66,8 @@ interface SafeStoredGameState {
   remainingGuesses: Record<string, number>;
   questionsUsedThisRound: Record<string, number>;
   extraGuessUsed: Record<string, boolean>;
+  revealedHints: HintCard[];
+  hintsUsedThisRound: Record<string, number>;
   roundEndReason: RoundEndReason;
   roundWinnerId: string | null;
   winnerPoints: number;
@@ -76,6 +81,8 @@ interface UndoSnapshot {
   remainingGuesses: Record<string, number>;
   questionsUsedThisRound: Record<string, number>;
   extraGuessUsed: Record<string, boolean>;
+  revealedHints: HintCard[];
+  hintsUsedThisRound: Record<string, number>;
 }
 
 const DEFAULT_GAME_STATE: SafeStoredGameState = {
@@ -95,6 +102,8 @@ const DEFAULT_GAME_STATE: SafeStoredGameState = {
   remainingGuesses: {},
   questionsUsedThisRound: {},
   extraGuessUsed: {},
+  revealedHints: [],
+  hintsUsedThisRound: {},
   roundEndReason: 'manual_end',
   roundWinnerId: null,
   winnerPoints: 0,
@@ -232,6 +241,25 @@ function loadStoredGameState(): SafeStoredGameState {
     const validQuestionsUsed = sanitizeNumberRecord(parsed.questionsUsedThisRound);
     const validExtraGuess = sanitizeBoolRecord(parsed.extraGuessUsed);
 
+    const validHintsUsed = sanitizeNumberRecord(parsed.hintsUsedThisRound);
+    const validRevealedHints: HintCard[] = Array.isArray(parsed.revealedHints)
+      ? parsed.revealedHints
+          .filter(
+            (hint: any) =>
+              hint &&
+              typeof hint === 'object' &&
+              typeof hint.key === 'string' &&
+              typeof hint.label === 'string' &&
+              typeof hint.value === 'string'
+          )
+          .slice(0, 5)
+          .map((hint: any) => ({
+            key: String(hint.key),
+            label: String(hint.label),
+            value: String(hint.value),
+          }))
+      : [];
+
     // 7. Sanitize Screen with state consistency validation
     let validScreen: GameScreenType = 'home';
     if (typeof parsed.screen === 'string' && VALID_SCREENS.includes(parsed.screen as GameScreenType)) {
@@ -331,6 +359,8 @@ function loadStoredGameState(): SafeStoredGameState {
       remainingGuesses: validRemainingGuesses,
       questionsUsedThisRound: validQuestionsUsed,
       extraGuessUsed: validExtraGuess,
+      revealedHints: validRevealedHints,
+      hintsUsedThisRound: validHintsUsed,
       roundEndReason: validEndReason,
       roundWinnerId: validRoundWinnerId,
       winnerPoints: validWinnerPoints,
@@ -354,6 +384,7 @@ export const App: React.FC = () => {
   const [screen, setScreen] = useState<GameScreenType>(initialSavedState.screen);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [isDailyOpen, setIsDailyOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Players & Settings
@@ -386,12 +417,18 @@ export const App: React.FC = () => {
   const [extraGuessUsed, setExtraGuessUsed] = useState<Record<string, boolean>>(
     initialSavedState.extraGuessUsed
   );
+  const [revealedHints, setRevealedHints] = useState<HintCard[]>(initialSavedState.revealedHints);
+  const [hintsUsedThisRound, setHintsUsedThisRound] = useState<Record<string, number>>(
+    initialSavedState.hintsUsedThisRound
+  );
 
   // Mirror refs for gameplay resources (stale closure protection)
   const remainingQuestionsRef = useRef<Record<string, number>>(initialSavedState.remainingQuestions);
   const remainingGuessesRef = useRef<Record<string, number>>(initialSavedState.remainingGuesses);
   const questionsUsedThisRoundRef = useRef<Record<string, number>>(initialSavedState.questionsUsedThisRound);
   const extraGuessUsedRef = useRef<Record<string, boolean>>(initialSavedState.extraGuessUsed);
+  const revealedHintsRef = useRef<HintCard[]>(initialSavedState.revealedHints);
+  const hintsUsedThisRoundRef = useRef<Record<string, number>>(initialSavedState.hintsUsedThisRound);
 
   // Round Results Calculation
   const [roundWinnerId, setRoundWinnerId] = useState<string | null>(initialSavedState.roundWinnerId);
@@ -458,6 +495,8 @@ export const App: React.FC = () => {
         remainingGuesses,
         questionsUsedThisRound,
         extraGuessUsed,
+        revealedHints,
+        hintsUsedThisRound,
         roundEndReason,
         roundWinnerId,
         winnerPoints,
@@ -482,6 +521,8 @@ export const App: React.FC = () => {
     remainingGuesses,
     questionsUsedThisRound,
     extraGuessUsed,
+    revealedHints,
+    hintsUsedThisRound,
     roundEndReason,
     roundWinnerId,
     winnerPoints,
@@ -500,6 +541,29 @@ export const App: React.FC = () => {
 
   const guessers = players.filter((_, idx) => idx !== currentPickerIndex);
   const roundWinner = players.find((p) => p.id === roundWinnerId) ?? null;
+  const hintDeck = buildHintDeck(currentProfile);
+
+  const handleUseHint = (playerId: string) => {
+    if (roundResolvedRef.current) return;
+    if (!guessers.some((g) => g.id === playerId)) return;
+
+    const used = hintsUsedThisRoundRef.current[playerId] ?? 0;
+    if (used >= HINTS_PER_PLAYER) return;
+
+    const nextHint = hintDeck[revealedHintsRef.current.length];
+    if (!nextHint) return;
+
+    pushUndoSnapshot();
+
+    hintsUsedThisRoundRef.current = {
+      ...hintsUsedThisRoundRef.current,
+      [playerId]: used + 1,
+    };
+    revealedHintsRef.current = [...revealedHintsRef.current, nextHint];
+
+    setHintsUsedThisRound(hintsUsedThisRoundRef.current);
+    setRevealedHints(revealedHintsRef.current);
+  };
 
   const pushUndoSnapshot = () => {
     const snapshot: UndoSnapshot = {
@@ -508,6 +572,8 @@ export const App: React.FC = () => {
       remainingGuesses: { ...remainingGuessesRef.current },
       questionsUsedThisRound: { ...questionsUsedThisRoundRef.current },
       extraGuessUsed: { ...extraGuessUsedRef.current },
+      revealedHints: [...revealedHintsRef.current],
+      hintsUsedThisRound: { ...hintsUsedThisRoundRef.current },
     };
     const nextStack = [...undoStackRef.current, snapshot].slice(-5);
     undoStackRef.current = nextStack;
@@ -530,14 +596,30 @@ export const App: React.FC = () => {
     remainingGuessesRef.current = { ...lastSnapshot.remainingGuesses };
     questionsUsedThisRoundRef.current = { ...lastSnapshot.questionsUsedThisRound };
     extraGuessUsedRef.current = { ...lastSnapshot.extraGuessUsed };
+    revealedHintsRef.current = [...lastSnapshot.revealedHints];
+    hintsUsedThisRoundRef.current = { ...lastSnapshot.hintsUsedThisRound };
 
     setPlayers(lastSnapshot.players.map((p) => ({ ...p })));
     setRemainingQuestions(remainingQuestionsRef.current);
     setRemainingGuesses(remainingGuessesRef.current);
     setQuestionsUsedThisRound(questionsUsedThisRoundRef.current);
     setExtraGuessUsed(extraGuessUsedRef.current);
+    setRevealedHints(revealedHintsRef.current);
+    setHintsUsedThisRound(hintsUsedThisRoundRef.current);
 
     sounds.playClick();
+  };
+
+  // First visit on this device: open the walkthrough once
+  useEffect(() => {
+    if (screen !== 'home') return;
+    if (hasSeenTutorial()) return;
+    setIsTutorialOpen(true);
+  }, [screen]);
+
+  const handleCloseTutorial = () => {
+    markTutorialSeen();
+    setIsTutorialOpen(false);
   };
 
   // 1. Setup Players -> Setup Rules
@@ -596,6 +678,10 @@ export const App: React.FC = () => {
     setRemainingGuesses(gMap);
     setQuestionsUsedThisRound(usedMap);
     setExtraGuessUsed(extraMap);
+    revealedHintsRef.current = [];
+    hintsUsedThisRoundRef.current = {};
+    setRevealedHints([]);
+    setHintsUsedThisRound({});
     setSelectedCandidate(null);
     setCurrentProfile(null);
     setRoundWinnerId(null);
@@ -876,10 +962,14 @@ export const App: React.FC = () => {
     remainingGuessesRef.current = {};
     questionsUsedThisRoundRef.current = {};
     extraGuessUsedRef.current = {};
+    revealedHintsRef.current = [];
+    hintsUsedThisRoundRef.current = {};
     setRemainingQuestions({});
     setRemainingGuesses({});
     setQuestionsUsedThisRound({});
     setExtraGuessUsed({});
+    setRevealedHints([]);
+    setHintsUsedThisRound({});
   };
 
   return (
@@ -905,6 +995,11 @@ export const App: React.FC = () => {
         onClose={() => setIsRulesModalOpen(false)}
       />
       <DailyChallenge isOpen={isDailyOpen} onClose={() => setIsDailyOpen(false)} />
+      <Tutorial
+        isOpen={isTutorialOpen}
+        onClose={handleCloseTutorial}
+        onStartGame={() => setScreen('setup_players')}
+      />
 
       {/* Settings Modal */}
       <SettingsModal
@@ -938,6 +1033,7 @@ export const App: React.FC = () => {
           <HomeScreen
             onStartGame={() => setScreen('setup_players')}
             onOpenRules={() => setIsRulesModalOpen(true)}
+            onOpenTutorial={() => setIsTutorialOpen(true)}
             onOpenDaily={() => setIsDailyOpen(true)}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
           />
@@ -1009,7 +1105,11 @@ export const App: React.FC = () => {
             extraGuessUsed={extraGuessUsed}
             roundEndsAt={roundEndsAt}
             undoCount={undoCount}
+            hintDeck={hintDeck}
+            revealedHints={revealedHints}
+            hintsUsed={hintsUsedThisRound}
             onUndo={handleUndo}
+            onUseHint={handleUseHint}
             onDeductQuestion={handleDeductQuestion}
             onDeductGuess={handleDeductGuess}
             onBuyExtraGuess={handleBuyExtraGuess}
