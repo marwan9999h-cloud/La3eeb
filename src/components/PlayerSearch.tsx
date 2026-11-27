@@ -8,6 +8,7 @@ import {
   Zap,
   WifiOff,
   ShieldAlert,
+  Dices,
 } from 'lucide-react';
 import { PlayerCandidate } from '../types';
 import { sounds } from '../utils/sound';
@@ -42,6 +43,17 @@ const QUICK_INSPIRATIONS = [
   'كريم بنزيما',
 ];
 
+// Keep in sync with server/packs.ts (PLAYER_PACKS). Only metadata here;
+// the actual draw happens server-side from the famous players database.
+const PLAYER_PACK_CHIPS = [
+  { id: 'legends', label: 'أساطير الكورة', emoji: '🏆' },
+  { id: 'premier-league', label: 'نجوم البريميرليج', emoji: '👑' },
+  { id: 'la-liga', label: 'نجوم الليجا', emoji: '⭐' },
+  { id: 'egypt-arab', label: 'نجوم مصر والعرب', emoji: '🌍' },
+  { id: 'attackers', label: 'هدافين ومهاجمين', emoji: '⚽' },
+  { id: 'keepers', label: 'حراس المرمى', emoji: '🧤' },
+];
+
 export const PlayerSearch: React.FC<PlayerSearchProps> = ({
   pickerName,
   onSelectCandidate,
@@ -51,6 +63,8 @@ export const PlayerSearch: React.FC<PlayerSearchProps> = ({
   const [loading, setLoading] = useState(false);
   const [errorInfo, setErrorInfo] = useState<SearchErrorInfo | null>(null);
   const [candidates, setCandidates] = useState<PlayerCandidate[] | null>(null);
+  const [packLoading, setPackLoading] = useState<string | null>(null);
+  const [packError, setPackError] = useState<string | null>(null);
   const [searchMeta, setSearchMeta] = useState<{
     exactMatch: boolean;
     ambiguous: boolean;
@@ -219,6 +233,35 @@ export const PlayerSearch: React.FC<PlayerSearchProps> = ({
     handleSearch(name);
   };
 
+  // Random famous player from a themed pack (local DB on the server: free + fast)
+  const handlePackDraw = async (packId: string) => {
+    if (packLoading || loading) return;
+    sounds.playSelect();
+    setPackLoading(packId);
+    setPackError(null);
+    try {
+      const res = await fetchWithTimeout(
+        `/api/random-player?pack=${encodeURIComponent(packId)}`,
+        { method: 'GET' },
+        API_TIMEOUTS.SEARCH
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.candidate) {
+        sounds.playDeduct();
+        setPackError(data?.error || 'حصلت مشكلة في السحب، جرب تاني أو دور بالاسم.');
+        return;
+      }
+      sounds.playSuccess();
+      onSelectCandidate(data.candidate as PlayerCandidate);
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
+      sounds.playDeduct();
+      setPackError('النت قطع أثناء السحب. جرب تاني أو دور بالاسم.');
+    } finally {
+      setPackLoading(null);
+    }
+  };
+
   return (
     <div className="w-full max-w-lg mx-auto py-4 sm:py-6 px-4 select-none" dir="rtl">
       {/* Header */}
@@ -268,6 +311,37 @@ export const PlayerSearch: React.FC<PlayerSearchProps> = ({
           </button>
         </div>
       </form>
+
+      {/* Player Packs: random famous player from a theme */}
+      <div className="mb-5">
+        <div className="flex items-center gap-1.5 mb-2.5 text-right">
+          <Dices className="w-4 h-4 text-[#22C55E]" />
+          <span className="text-xs font-black text-[#8FA095]">
+            مش عارف تختار مين؟ اسحب لاعب عشوائي من باك:
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          {PLAYER_PACK_CHIPS.map((pack) => {
+            const isDrawing = packLoading === pack.id;
+            return (
+              <button
+                key={pack.id}
+                type="button"
+                id={`btn-pack-${pack.id}`}
+                onClick={() => handlePackDraw(pack.id)}
+                disabled={loading || packLoading !== null}
+                className="py-2.5 px-3 rounded-xl bg-[#171E1A] hover:bg-[#1C2420] border border-[#212823] hover:border-[#22C55E]/40 text-[#EEF2EF] text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-wait"
+              >
+                <span>{pack.emoji}</span>
+                <span>{isDrawing ? 'بنسحب...' : pack.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        {packError && (
+          <p className="mt-2 text-[11px] text-amber-400 text-right">{packError}</p>
+        )}
+      </div>
 
       {/* Centered Surface Card Loading Component */}
       {loading && (
