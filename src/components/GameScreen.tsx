@@ -7,6 +7,7 @@ import {
   PlusCircle,
   Sparkles,
   RotateCcw,
+  Lightbulb,
 } from 'lucide-react';
 import { Player, PlayerProfile, RoundEndReason } from '../types';
 import { sounds } from '../utils/sound';
@@ -17,6 +18,7 @@ import {
 } from '../utils/scoring';
 import { PlayerProfileModal } from './PlayerProfileModal';
 import { AiAssistantModal } from './AiAssistantModal';
+import { HINTS_PER_PLAYER, type HintCard } from '../utils/hints';
 
 interface GameScreenProps {
   roundNumber: number;
@@ -29,7 +31,11 @@ interface GameScreenProps {
   extraGuessUsed: Record<string, boolean>;
   roundEndsAt: number | null;
   undoCount: number;
+  hintDeck: HintCard[];
+  revealedHints: HintCard[];
+  hintsUsed: Record<string, number>;
   onUndo: () => void;
+  onUseHint: (playerId: string) => void;
   onDeductQuestion: (playerId: string) => void;
   onDeductGuess: (playerId: string) => void;
   onBuyExtraGuess: (playerId: string) => void;
@@ -48,7 +54,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   extraGuessUsed,
   roundEndsAt,
   undoCount,
+  hintDeck,
+  revealedHints,
+  hintsUsed,
   onUndo,
+  onUseHint,
   onDeductQuestion,
   onDeductGuess,
   onBuyExtraGuess,
@@ -283,6 +293,26 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     setConfirmWinnerPlayer(player);
   };
 
+  const handleUseHintClick = (player: Player) => {
+    if (timeUp || isAnyModalOpen) return;
+    if (isDebounced(`hint-${player.id}`)) return;
+
+    const used = hintsUsed[player.id] ?? 0;
+    if (used >= HINTS_PER_PLAYER) {
+      sounds.playDeduct();
+      showFeedbackToast('كل مخمّن عنده تلميح واحد بس في الجولة.');
+      return;
+    }
+    if (revealedHints.length >= hintDeck.length) {
+      sounds.playDeduct();
+      showFeedbackToast('مفيش تلميحات إضافية متاحة للاعب ده.');
+      return;
+    }
+
+    sounds.playSelect();
+    onUseHint(player.id);
+  };
+
   const handleConfirmWinner = () => {
     if (!confirmWinnerPlayer) return;
     const winnerId = confirmWinnerPlayer.id;
@@ -381,6 +411,42 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             اسألوه أسئلة ذكية وخمنوا مين اللاعب قبل ما محاولاتكم تخلص!
           </p>
         </div>
+      </div>
+
+      {/* Round Hints Panel (free, one per guesser) */}
+      <div id="hints-panel" className="bg-[#131815] p-3.5 sm:p-4 rounded-2xl border border-amber-800/30 text-right space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-xs sm:text-sm font-black text-[#EEF2EF] flex items-center gap-2">
+            <Lightbulb className="w-4 h-4 text-amber-400" />
+            <span>تلميحات الجولة</span>
+          </h3>
+          <span className="text-[10px] font-bold text-[#8FA095] bg-[#171E1A] border border-[#212823] px-2 py-0.5 rounded-full">
+            تلميح مجاني لكل مخمّن
+          </span>
+        </div>
+
+        {revealedHints.length === 0 ? (
+          <p className="text-[11px] text-[#8FA095] leading-relaxed">
+            لو حد تايه، اضغط «تلميح» جوه كارت اللاعب وهنكشف معلومة واحدة عن اللاعب السري من غير ما تنقص أسئلة ولا تخمينات.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {revealedHints.map((hint, index) => (
+              <div
+                key={`${hint.key}-${index}`}
+                id={`revealed-hint-${index}`}
+                className="flex items-center justify-between gap-3 bg-amber-950/25 border border-amber-800/40 rounded-xl px-3 py-2"
+              >
+                <span className="text-[11px] font-bold text-amber-300/90">{hint.label}</span>
+                <span className="text-xs font-black text-[#EEF2EF]">{hint.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {revealedHints.length >= hintDeck.length && hintDeck.length > 0 && (
+          <p className="text-[10px] text-[#5C6B61]">كل التلميحات المتاحة للجولة دي ظهرت.</p>
+        )}
       </div>
 
       {/* Guesser Status Cards */}
@@ -489,6 +555,35 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
                 {/* Extra Guess & Win Action */}
                 <div className="space-y-2 pt-2 border-t border-[#212823]">
+                  {/* Free Hint */}
+                  {(() => {
+                    const hintUsed = hintsUsed[player.id] ?? 0;
+                    const deckFinished = hintDeck.length === 0 || revealedHints.length >= hintDeck.length;
+                    const hintsLeft = Math.max(0, HINTS_PER_PLAYER - hintUsed);
+                    const hintDisabled = buttonsDisabled || hintsLeft <= 0 || deckFinished;
+                    const hintLabel = deckFinished
+                      ? 'مفيش تلميحات متاحة'
+                      : hintsLeft <= 0
+                      ? 'استخدمت التلميح'
+                      : `تلميح مجاني (${hintsLeft})`;
+
+                    return (
+                      <button
+                        id={`btn-hint-${player.id}`}
+                        onClick={() => handleUseHintClick(player)}
+                        disabled={hintDisabled}
+                        className={`w-full py-1.5 px-2 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                          !hintDisabled
+                            ? 'bg-amber-950/25 hover:bg-amber-900/35 text-amber-300 border border-amber-800/40 active:scale-95'
+                            : 'bg-[#171E1A]/40 text-[#5C6B61] border border-[#212823]/40 cursor-not-allowed'
+                        }`}
+                      >
+                        <Lightbulb className="w-3.5 h-3.5" />
+                        <span>{hintLabel}</span>
+                      </button>
+                    );
+                  })()}
+
                   {/* Extra Guess Option */}
                   {!hasUsedExtra ? (
                     <button
