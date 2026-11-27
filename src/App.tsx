@@ -11,6 +11,7 @@ import { Navbar } from './components/Navbar';
 import { HomeScreen } from './components/HomeScreen';
 import { SettingsModal } from './components/SettingsModal';
 import { RulesModal } from './components/RulesModal';
+import { DailyChallenge } from './components/DailyChallenge';
 import { SetupPlayers } from './components/SetupPlayers';
 import { SetupRules } from './components/SetupRules';
 import { RoundIntro } from './components/RoundIntro';
@@ -352,6 +353,7 @@ export const App: React.FC = () => {
   // Navigation & Game State
   const [screen, setScreen] = useState<GameScreenType>(initialSavedState.screen);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
+  const [isDailyOpen, setIsDailyOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   // Players & Settings
@@ -902,6 +904,7 @@ export const App: React.FC = () => {
         isOpen={isRulesModalOpen}
         onClose={() => setIsRulesModalOpen(false)}
       />
+      <DailyChallenge isOpen={isDailyOpen} onClose={() => setIsDailyOpen(false)} />
 
       {/* Settings Modal */}
       <SettingsModal
@@ -935,6 +938,7 @@ export const App: React.FC = () => {
           <HomeScreen
             onStartGame={() => setScreen('setup_players')}
             onOpenRules={() => setIsRulesModalOpen(true)}
+            onOpenDaily={() => setIsDailyOpen(true)}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
           />
         )}
